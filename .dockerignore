@@ -1,0 +1,6 @@
+# Only image inputs are sent to the Docker build context.
+*
+!Dockerfile
+!.dockerignore
+!postgres0.yml
+!postgres1.yml
