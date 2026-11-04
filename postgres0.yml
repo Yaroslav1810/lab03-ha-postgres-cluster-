@@ -1,0 +1,76 @@
+# имя кластера
+scope: my_cluster
+namespace: /service/
+name: postgresql0
+
+# api для прверки ноды
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: pg-master:8008
+
+zookeeper:
+  hosts:
+    - zoo:2181
+
+# dcs
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 10485760
+    primary_start_timeout: 300
+    synchronous_mode: true
+    # если синхронная недоступна то разрешаем лидеру запись
+    synchronous_mode_strict: false
+    synchronous_node_count: 1
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        wal_level: replica
+        hot_standby: "on"
+        # wal т к postgre15
+        wal_keep_size: 128MB
+        max_wal_senders: 10
+        max_replication_slots: 10
+        wal_log_hints: "on"
+        archive_mode: "always"
+        archive_timeout: 1800s
+        archive_command: 'mkdir -p /tmp/wal_archive && test ! -f /tmp/wal_archive/%f && cp %p /tmp/wal_archive/%f'
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: pg-master:5432
+  # каждой ноде отдельный volume в сompose
+  data_dir: /var/lib/postgresql/data/postgresql0
+  bin_dir: /usr/lib/postgresql/15/bin
+  pgpass: /tmp/pgpass0
+  # учётные записи
+  authentication:
+    replication:
+      username: replicator
+      password: rep-pass
+    superuser:
+      username: postgres
+      password: postgres
+  # локальный доступ в контейнере и сетевой по ппролю
+  pg_hba:
+    - local all all trust
+    - host replication replicator 0.0.0.0/0 scram-sha-256
+    - host all all 0.0.0.0/0 scram-sha-256
+  parameters:
+    password_encryption: scram-sha-256
+    unix_socket_directories: /var/run/postgresql
+
+watchdog:
+  mode: 'off'
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false

@@ -1,0 +1,35 @@
+services:
+  zoo:
+    image: zookeeper:3.9 # образ ZooKeeper
+
+  pg-master:
+    build: . # взять образ из Dockerfile
+    image: lab03-postgres:patroni # присвоить образу имя lab03-postgres:patroni
+    command: ["patroni", "/postgres0.yml"] # команда патрони на запуск postgres
+    volumes: # хранилища данных контейнера
+      - pg-master-data:/var/lib/postgresql/data # источник и место хранения
+    depends_on:
+      - zoo # сначала запустить контейнер zoo
+
+  pg-slave:
+    image: lab03-postgres:patroni
+    command: ["patroni", "/postgres1.yml"]
+    volumes:
+      - pg-slave-data:/var/lib/postgresql/data
+    depends_on:
+      - zoo
+
+  haproxy:
+    image: haproxy:3.0
+    ports:
+      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:7000:7000"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro # читать конфиг в копию
+    depends_on:
+      - pg-master
+      - pg-slave
+
+volumes: # хранилища для докера
+  pg-master-data:
+  pg-slave-data:
