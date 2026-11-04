@@ -3,7 +3,7 @@ scope: my_cluster
 namespace: /service/
 name: postgresql1
 
-# api для прверки нodы
+# api для прверки нoды
 restapi:
   listen: 0.0.0.0:8008
   connect_address: pg-slave:8008
